@@ -1,0 +1,7 @@
+# Ignore all generated directories
+*/
+
+# Don't ignore Arduino/
+!Arduino
+!Arduino/bladderSensor/
+!Arduino/EEPROMC/
