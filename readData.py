@@ -109,9 +109,6 @@ print("Serial closed")
 with open(os.path.join(dir_path, info_name), 'a') as f:
     f.write("# Sweeps: {}\n".format(count))
 
-# print(x)
-# print(y)
-
 if (len(x) > len(y)):
     x.pop()
 elif (len(y) > len(x)):
