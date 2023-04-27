@@ -36,6 +36,8 @@ x = []
 y = []
 # Count # of frequency sweeps performed by Arduino
 count = 0
+# Count # of errors
+errors = 0
 
 # todo fix formatting of matplotlib
 
@@ -99,6 +101,7 @@ with open(os.path.join(dir_path, csv_name), "w", newline = '', encoding='utf-8')
             print(f"\t{time} {data}")
             writer.writerow({'time': time, 'impedance':data, 'error':1})
             data = last_data
+            errors += 1
 
         x.append(time)
         y.append(float(data))
@@ -108,6 +111,7 @@ print("Serial closed")
 
 with open(os.path.join(dir_path, info_name), 'a') as f:
     f.write("# Sweeps: {}\n".format(count))
+    f.write("# Errors: {}\n".format(errors))
 
 if (len(x) > len(y)):
     x.pop()
