@@ -71,6 +71,26 @@ void setup(void)
     }
   }
 
+  for (int i = 0;i < WINDOW_SIZE;i++)
+    {
+      start_med_arr[i] = window_med_arr[i] = frequencySweepAvg();
+      delay(DELAY / 2);
+    }
+
+  start_med = median(start_med_arr, WINDOW_SIZE);
+  window_med_count = 0;
+
+  target = start_med - DIFF;
+
+  Serial.print("Starting median impedance: ");
+  Serial.println(start_med);
+
+  Serial.print("Target median impedance: ");
+  Serial.println(target);
+
+  Serial.print("Window size: ");
+  Serial.println(WINDOW_SIZE);
+
   Serial.print("Start freq: ");
   Serial.println(START_FREQ);
 
@@ -106,11 +126,13 @@ void loop(void)
 {
   double avg_impedance = frequencySweepAvg();
 
+  // shift array values left
   for (int i = WINDOW_SIZE - 1;i > 0;i--)
   {
     window_med_arr[i - 1] = window_med_arr[i];
   }
 
+  // copy average impedance to window arr
   window_med_arr[WINDOW_SIZE - 1] = avg_impedance;
 
   window_med = median(window_med_arr, WINDOW_SIZE);
