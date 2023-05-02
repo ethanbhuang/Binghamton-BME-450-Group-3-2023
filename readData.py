@@ -92,6 +92,10 @@ with open(os.path.join(dir_path, csv_name), "w", newline = '', encoding='utf-8')
             last_data = data
 
             print(f"\t{time} {data}")
+            
+            if (data == "You've reached critical capacity."):
+                break
+
             writer.writerow({'time': time, 'impedance':data, 'error':0})
         except KeyboardInterrupt as e:
             print("Serial stream forcefully ended")

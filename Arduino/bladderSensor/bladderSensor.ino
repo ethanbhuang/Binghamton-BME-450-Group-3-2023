@@ -9,11 +9,22 @@
 #define NUM_INCR    (40)
 #define REF_RESIST  (1800)
 #define DELAY       (1000)
-#define TEST_CALIBRATION 0
+#define WINDOW_SIZE (10)
+#define WINDOW_TOLERANCE (5)
+#define DIFF (15.0)
+#define TEST_CALIBRATION (0)
 
+// Array to store calibration gain values
 double gain[NUM_INCR];
+// Array to store calibration phase values
+// Unused, but required by AD5933.h 
 int phase[NUM_INCR+1];
-int count;
+double start_med_arr[WINDOW_SIZE];
+double start_med;
+double target;
+double window_med_arr[WINDOW_SIZE];
+double window_med;
+int window_med_count;
 
 void setup(void)
 {
@@ -93,8 +104,28 @@ void setup(void)
 
 void loop(void)
 {
-  // Easy to use method for frequency sweep
-  frequencySweepEasy();
+  double avg_impedance = frequencySweepAvg();
+
+  for (int i = WINDOW_SIZE - 1;i > 0;i--)
+  {
+    window_med_arr[i - 1] = window_med_arr[i];
+  }
+
+  window_med_arr[WINDOW_SIZE - 1] = avg_impedance;
+
+  window_med = median(window_med_arr, WINDOW_SIZE);
+
+  if (window_med <= target) window_med_count += 1;
+  else window_med_count = 0;
+  
+  if (window_med_count >= WINDOW_TOLERANCE)
+  {
+    Serial.println("You've reached critical capacity.");
+    while (true);
+  }
+
+  printDouble(avg_impedance, 4);
+  Serial.print("\n");
 
   // Delay
   delay(DELAY);
@@ -104,15 +135,15 @@ void loop(void)
 // Easy way to do a frequency sweep. Does an entire frequency sweep at once and
 // stores the data into arrays for processing afterwards. This is easy-to-use,
 // but doesn't allow you to process data in real time.
-void frequencySweepEasy() {
-    // Create arrays to hold the data
+double frequencySweepAvg() {
+   // Create arrays to hold the data
     int real[NUM_INCR + 1], imag[NUM_INCR + 1];
+    double avg_impedance = 0;
 
     // Perform the frequency sweep
     if (AD5933::frequencySweep(real, imag, NUM_INCR+1)) {
       // Print the frequency data
       int cfreq = START_FREQ/1000;
-      double avg_impedance = 0;
       for (int i = 0; i < NUM_INCR; i++, cfreq += FREQ_INCR/1000) {
         // Compute impedance
         // equation for amplitude
@@ -122,69 +153,15 @@ void frequencySweepEasy() {
         avg_impedance += impedance;
       }
 
-      // uh I have to test this code
-      // Serial.print(count++);
-      // Serial.print(" : Average impedance = ");
-      // printDouble((avg_impedance / NUM_INCR), 4);
-      // Serial.println(" Ohms");
-
-      printDouble((avg_impedance / NUM_INCR), 4);
-      Serial.print("\n");
-      // Serial.print();
+      avg_impedance /= NUM_INCR;
     }
     else Serial.println("Frequency sweep failed...");
+
+  return avg_impedance;
 }
 
-
-// Removes the frequencySweep abstraction from above. This saves memory and
-// allows for data to be processed in real time. However, it's more complex.
-void frequencySweepRaw() {
-    // Create variables to hold the impedance data and track frequency
-    int real, imag, i = 0, cfreq = START_FREQ/1000;
-
-    // Initialize the frequency sweep
-    if (!(AD5933::setPowerMode(POWER_STANDBY) &&          // place in standby
-          AD5933::setControlMode(CTRL_INIT_START_FREQ) && // init start freq
-          AD5933::setControlMode(CTRL_START_FREQ_SWEEP))) // begin frequency sweep
-         {
-             Serial.println("Could not initialize frequency sweep...");
-         }
-
-    // Perform the actual sweep
-    while ((AD5933::readStatusRegister() & STATUS_SWEEP_DONE) != STATUS_SWEEP_DONE) {
-        // Get the frequency data for this frequency point
-        if (!AD5933::getComplexData(&real, &imag)) {
-            Serial.println("Could not get raw frequency data...");
-        }
-
-        // Print out the frequency data
-        Serial.print(cfreq);
-        Serial.print(": R=");
-        Serial.print(real);
-        Serial.print("/I=");
-        Serial.print(imag);
-
-        // Compute impedance
-        double magnitude = sqrt(pow(real, 2) + pow(imag, 2));
-        double impedance = 1/(magnitude*gain[i]); //replace with EEPROM data
-        Serial.print("  |Z|=");
-        Serial.println(impedance);
-
-        // Increment the frequency
-        i++;
-        cfreq += FREQ_INCR/1000;
-        AD5933::setControlMode(CTRL_INCREMENT_FREQ);
-    }
-
-    Serial.println("Frequency sweep complete!");
-
-    // Set AD5933 power mode to standby when finished
-    if (!AD5933::setPowerMode(POWER_STANDBY))
-        Serial.println("Could not set to standby...");
-}
-
-
-// cite this code
+// Code sourced from
+// https://forum.arduino.cc/t/printing-a-double-variable/44327/17
 void printDouble( double val, byte precision){
   // prints val with number of decimal places determine by precision
   // precision is a number from 0 to 6 indicating the desired decimial places
@@ -212,3 +189,31 @@ void printDouble( double val, byte precision){
   }
 }
 
+double median(double arr[], int size)
+{
+  double *temp = arr;
+  double median;
+
+  qsort(temp, size, sizeof(arr[0]), sort_desc);
+
+  if (WINDOW_SIZE % 2 == 0)
+  {
+    median = (arr[size / 2] + arr[(size / 2) + 1]) / 2; 
+  } 
+  else
+  {
+    median = arr[size / 2];
+  }
+
+  return median;
+}
+
+// sort function for qsort
+int sort_desc(const void *cmp1, const void *cmp2)
+{
+  // Need to cast the void * to int *
+  double a = *((double *) cmp1);
+  double b = *((double *) cmp2);
+  // The comparison
+  return a > b ? -1 : (a < b ? 1 : 0);
+}
