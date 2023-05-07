@@ -13,6 +13,8 @@
 #define WINDOW_TOLERANCE (5)
 #define DIFF (15.0)
 #define TEST_CALIBRATION (0)
+#define TEST_TOL (1)
+#define DEBUG (0)
 
 // Array to store calibration gain values
 double gain[NUM_INCR];
@@ -28,12 +30,17 @@ int window_med_count;
 
 void setup(void)
 {
-
-  // Begin I2C
   Wire.begin();
 
-  // Begin serial at 9600 baud for output
-  Serial.begin(9600);
+  if (DEBUG)
+  {
+    Serial.begin(9600);
+  } 
+  else
+  {
+    Serial.begin(115200);
+  }
+
   // Wait for Serial to begin
   while (!Serial);
 
@@ -43,13 +50,15 @@ void setup(void)
         AD5933::setStartFrequency(START_FREQ) &&
         AD5933::setIncrementFrequency(FREQ_INCR) &&
         AD5933::setNumberIncrements(NUM_INCR) &&
-        AD5933::setPGAGain(PGA_GAIN_X1)))
+        AD5933::setPGAGain(PGA_GAIN_X1))
+      )
         {
             Serial.println("Failed in initialization");
             while (true);
         }
 
   Serial.print("Calibrated: ");
+
   if (!EEPROMIsCalibrated() || TEST_CALIBRATION)
   {
     Serial.println("No");
@@ -82,38 +91,41 @@ void setup(void)
 
   target = start_med - DIFF;
 
-  Serial.print("Starting median impedance: ");
-  Serial.println(start_med);
-
-  Serial.print("Target median impedance: ");
-  Serial.println(target);
-
-  Serial.print("Window size: ");
-  Serial.println(WINDOW_SIZE);
-
-  Serial.print("Start freq: ");
-  Serial.println(START_FREQ);
-
-  Serial.print("Increment Frequency: ");
-  Serial.println(FREQ_INCR);
-
-  Serial.print("Increment #: ");
-  Serial.println(NUM_INCR);
-
-  Serial.print("Previous reference resistance: ");
-  Serial.println(EEPROMRefResistance(NUM_INCR));
-
-  Serial.print("Delay: ");
-  Serial.println(DELAY);
-
-  Serial.println("EEPROM calibration data:");
-  for (int i = 0;i < NUM_INCR;i++)
+  if (DEBUG)
   {
-    Serial.print("\tEEPROM[");
-    Serial.print(i);
-    Serial.print("]: ");
-    printDouble(gain[i], 10);
-    Serial.println();
+    Serial.print("Starting median impedance: ");
+    Serial.println(start_med);
+
+    Serial.print("Target median impedance: ");
+    Serial.println(target);
+
+    Serial.print("Window size: ");
+    Serial.println(WINDOW_SIZE);
+
+    Serial.print("Start freq: ");
+    Serial.println(START_FREQ);
+
+    Serial.print("Increment Frequency: ");
+    Serial.println(FREQ_INCR);
+
+    Serial.print("Increment #: ");
+    Serial.println(NUM_INCR);
+
+    Serial.print("Previous reference resistance: ");
+    Serial.println(EEPROMRefResistance(NUM_INCR));
+
+    Serial.print("Delay: ");
+    Serial.println(DELAY);
+
+    Serial.println("EEPROM calibration data:");
+    for (int i = 0;i < NUM_INCR;i++)
+    {
+      Serial.print("\tEEPROM[");
+      Serial.print(i);
+      Serial.print("]: ");
+      printDouble(gain[i], 10);
+      Serial.println();
+    }
   }
   
   Serial.println("Device calibrated");
@@ -140,8 +152,9 @@ void loop(void)
   if (window_med <= target) window_med_count += 1;
   else window_med_count = 0;
   
-  if (window_med_count >= WINDOW_TOLERANCE)
+  if (window_med_count >= WINDOW_TOLERANCE && TEST_TOL)
   {
+    // Loops until failure. Requires user to power off device and power back on.
     Serial.println("You've reached critical capacity.");
     while (true);
   }
