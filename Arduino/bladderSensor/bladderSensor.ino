@@ -21,17 +21,23 @@ double gain[NUM_INCR];
 // Array to store calibration phase values
 // Unused, but required by AD5933.h 
 int phase[NUM_INCR+1];
+// Array used to calculate starting median
 double start_med_arr[WINDOW_SIZE];
 double start_med;
+// start_med - DIFF
 double target;
+// Array used to calculate window median
 double window_med_arr[WINDOW_SIZE];
+// a median of the last WINDOW_SIZE sweeps
 double window_med;
+// the number of sweep medians at or below target
 int window_med_count;
 
 void setup(void)
 {
   Wire.begin();
 
+  // toggle Serial and Bluetooth output
   if (DEBUG)
   {
     Serial.begin(9600);
@@ -59,6 +65,7 @@ void setup(void)
 
   Serial.print("Calibrated: ");
 
+  // run if EEPROM is not calibrated or TEST_CALIBRATION is True
   if (!EEPROMIsCalibrated() || TEST_CALIBRATION)
   {
     Serial.println("No");
@@ -71,12 +78,12 @@ void setup(void)
   {
     Serial.println("Yes");
     // load EEPROM values into gain[]
-    double mandy;
+    double dummy;
 
     for (int i = 0;i < NUM_INCR;i++)
     {
-      EEPROM.get(i * sizeof(double), mandy);
-      gain[i] = mandy;
+      EEPROM.get(i * sizeof(double), dummy);
+      gain[i] = dummy;
     }
   }
 
@@ -91,6 +98,7 @@ void setup(void)
 
   target = start_med - DIFF;
 
+  // Data logging for Python script
   if (DEBUG)
   {
     Serial.print("Starting median impedance: ");
