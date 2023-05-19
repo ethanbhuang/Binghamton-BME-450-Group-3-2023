@@ -61,7 +61,7 @@ To install the Android application, you must download the [Android Studio IDE](h
 
 # Further Information
 
-Detailed documentation is included within each of the project files. For further information, contact [Ethan Huang](mailto:ehuang35@binghamton.edu?subject=BME%20Capstone%20Project).
+Detailed documentation is included within each of the project files. For further information, contact [Ethan Huang](mailto:ehuang35@binghamton.edu).
 
 Thanks to the whole team for a wonderful semester: Shrishti Gupta, Zhixuan He, Pauline Macapinlac, and Patrick Rodrigues.
 
